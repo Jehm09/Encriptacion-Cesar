@@ -1,0 +1,173 @@
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Servidor {
+
+	/**
+	 * Puerto por donde el servidor atendera a los clientes
+	 */
+	public static final int PORT = 5000;
+	/**
+	 * El servidor dispone de un serversocket, para permitir la conexion a los
+	 * clientes
+	 */
+	private static ServerSocket serverSocket;
+	/**
+	 * El servidor dispone de un socket para atender a cada cliente por individual
+	 */
+	private static Socket socket;
+
+	public static void main(String[] args) {
+		DataInputStream in;
+		DataOutputStream out;
+
+		try {
+			serverSocket = new ServerSocket(PORT);
+			System.out.println("::Servidor escuchando a los posibles clientes::");
+
+			while (true) {
+				/*
+				 * Esperando respuesta del usuario, solo acepta uno a uno, usar hilos para
+				 * atender a varios usuarios al timepo.
+				 */
+				socket = serverSocket.accept();
+				System.out.println("El cliente se ha conectado!");
+
+				// Para obtener datos y enviar datos
+				in = new DataInputStream(socket.getInputStream());
+				out = new DataOutputStream(socket.getOutputStream());
+
+				// Recibo la palabra a encritar del usuario
+				String word = in.readUTF();
+				// Genero el key del 1-20
+				int key = (int) (Math.random() * 20 + 1);
+
+				// Palabara y llave encriptada
+				String wordEncrypted = encriptacionCesar(word, key);
+				String keyEncrypted = encriptacionHexadecimal(key + "");
+
+				// Desencriptar palabra y key
+				String keyDecrypted = desencriptacionHexadecimal(keyEncrypted);
+				String wordDecryted = desencriptacionCesar(wordEncrypted, Integer.parseInt(keyDecrypted));
+
+				out.writeUTF("La palabra Encriptada es: " + wordEncrypted + "\n" + "La clave encriptada es: "
+						+ keyEncrypted + "\n" + "La palabra Desencriptada es: " + wordDecryted + "\n"
+						+ "La clave Desencriptada es: " + keyDecrypted + "\n");
+
+				// Cierro la conexion con el cliente
+				socket.close();
+				in.close();
+				out.close();
+				System.out.println("::El cliente fue desconectado del server::");
+
+			}
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	/*
+	 * Metodo que se encarga de encritar la palabra orginal, usando el cifrado
+	 * cesar, el cual consiste en generar un numero del 1-20 y desplazar hacia la
+	 * izquierda o derecha la letra dicha cantidad en el alfabeto. En este caso se
+	 * hara hacia la derecha
+	 */
+	private static String encriptacionCesar(String word, int key) {
+		StringBuilder wordEncrypted = new StringBuilder();
+		char arr[] = word.toCharArray();
+
+		for (int i = 0; i < arr.length; i++) {
+			if (Character.isAlphabetic(arr[i])) {
+				if (Character.isUpperCase(arr[i])) {
+					int value = arr[i] - 'A';
+					value = (value + key) % 26;
+					value += 'A';
+					wordEncrypted.append((char) value + "");
+				} else {
+					int value = arr[i] - 'a';
+					value = (value + key) % 26;
+					value += 'a';
+					wordEncrypted.append((char) value + "");
+				}
+			} else
+				wordEncrypted.append(arr[i] + "");
+		}
+
+		return wordEncrypted.toString();
+	}
+
+	/*
+	 * Metodo que desencripta la palabra encriptada
+	 */
+	private static String desencriptacionCesar(String word, int key) {
+		StringBuilder wordDecrypted = new StringBuilder();
+		char arr[] = word.toCharArray();
+
+		for (int i = 0; i < arr.length; i++) {
+			if (Character.isAlphabetic(arr[i])) {
+				if (Character.isUpperCase(arr[i])) {
+					int value = arr[i] - 'A';
+					value = (value - key);
+					if (value < 0)
+						value = 26 + value;
+					else
+						value %= 26;
+					value += 'A';
+					wordDecrypted.append((char) value + "");
+				} else {
+					int value = arr[i] - 'a';
+					value = (value - key);
+					if (value < 0)
+						value = 26 + value;
+					else
+						value %= 26;
+					value += 'a';
+					wordDecrypted.append((char) value + "");
+				}
+			} else
+				wordDecrypted.append(arr[i] + "");
+		}
+
+		return wordDecrypted.toString();
+	}
+
+	/*
+	 * Metodo que se encagar de encriptar la key del encriptado cesar, usando un
+	 * metodo de encriptacion hexadecimal, usando los valores de la tablas ascii y
+	 * convertirlos a hexadecimal. Consiste en cojer cada numero por aparte
+	 * convertirlo a ascii y dicho numero ascii pasarlo a hexadecimal.
+	 */
+	private static String encriptacionHexadecimal(String key) {
+		StringBuilder wordHexadecimal = new StringBuilder();
+		char arr[] = key.toCharArray();
+
+		for (int i = 0; i < arr.length; i++) {
+			int value = (int) arr[i];
+			wordHexadecimal.append(Integer.toHexString(value) + " ");
+		}
+
+		return wordHexadecimal.toString().trim();
+	}
+
+	/*
+	 * Metodo que se encagar de desencriptar el valor hexadecimal y llevarlo a
+	 * decimal
+	 */
+	private static String desencriptacionHexadecimal(String key) {
+		StringBuilder wordDecimal = new StringBuilder();
+		String arr[] = key.split(" ");
+
+		for (int i = 0; i < arr.length; i++) {
+			int value = Integer.parseInt(arr[i], 16);
+			wordDecimal.append((char) value + "");
+		}
+
+		return wordDecimal.toString();
+	}
+}
