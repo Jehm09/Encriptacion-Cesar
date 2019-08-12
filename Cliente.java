@@ -36,6 +36,8 @@ public class Cliente {
 	 */
 	private static BufferedReader br;
 	private static BufferedWriter bw;
+	private static DataInputStream in;
+	private static DataOutputStream out;
 	private static int key;
 
 	/**
@@ -44,10 +46,6 @@ public class Cliente {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-
-		DataInputStream in = null;
-		DataOutputStream out = null;
-
 		try {
 			br = new BufferedReader(new InputStreamReader(System.in));
 			bw = new BufferedWriter(new OutputStreamWriter(System.out));
@@ -65,28 +63,15 @@ public class Cliente {
 			/*
 			 * Hilo para lectura 
 			 */
-			Runnable lectura = new lectura(in);
+			Runnable lectura = new lectura();
 			new Thread(lectura).start();
 			
 			/*
 			 * Hilo para escritura 
 			 */
-			Runnable escritura = new escritura(out);
+			Runnable escritura = new escritura();
 			new Thread(escritura).start();
 			
-			
-			while (!exit) {}
-					System.out.println("holas");
-			
-			// Cierro los buffers
-			br.close();
-			bw.close();
-
-			// Cierro la conexion con el servidor
-			socket.close();
-			in.close();
-			out.close();
-
 		} catch (Exception e) {
 			e.printStackTrace();
 			// TODO: handle exception
@@ -100,11 +85,6 @@ public class Cliente {
 	 *
 	 */
 	public static class lectura implements Runnable {
-		private  DataInputStream in;
-		
-		public lectura(DataInputStream in) {
-				this.in = in;
-		}
 		
 		@Override
 		public void run() {
@@ -112,11 +92,24 @@ public class Cliente {
 				try {
 					String word = in.readUTF();
 					word = desencriptacionCesar(word, key);
-					bw.write(word+"\n-");
+					bw.write(word+"\n");
 					bw.flush();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+			}
+			
+			try {
+				// Cierro los buffers
+				br.close();
+				bw.close();
+				
+				// Cierro la conexion con el servidor
+				socket.close();
+				in.close();
+				out.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 
@@ -128,13 +121,6 @@ public class Cliente {
 	 *
 	 */
 	public static class escritura implements Runnable {
-		private DataOutputStream out;
-		
-		public escritura(DataOutputStream out) {
-			this.out = out;
-		}
-		
-		
 		@Override
 		public void run() {
 			while (!exit) {

@@ -52,7 +52,7 @@ public class Servidor {
 			Runnable conexion = new conexion();
 			new Thread(conexion).start();
 
-			while (true) {}
+//			while (true) {}
 
 			// Recibo el mensaje del cliente1
 			// Envio el mensaje al cliente2
