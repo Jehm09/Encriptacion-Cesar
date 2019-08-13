@@ -12,6 +12,7 @@ public class Cliente {
 	 * Constantes
 	 */
 	public static final String EXIT = "SALIR";
+	public static final String EXITSERVER = "Usted se ha desconectado del servidor";
 
 	/*
 	 * 
@@ -91,7 +92,9 @@ public class Cliente {
 			while (!exit) {
 				try {
 					String word = in.readUTF();
-					word = desencriptacionCesar(word, key);
+					if (!word.equals(EXITSERVER)) {
+						word = desencriptacionCesar(word, key);
+					}
 					bw.write(word+"\n");
 					bw.flush();
 				} catch (IOException e) {
@@ -131,7 +134,9 @@ public class Cliente {
 					if (word.equals(EXIT)) {
 						exit = true;
 					}
-					word = encriptacionCesar(word, key);
+					else {
+						word = encriptacionCesar(word, key);
+					}
 					out.writeUTF(word);
 
 				} catch (IOException e) {

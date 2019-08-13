@@ -3,7 +3,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Servidor {
 	/**
@@ -30,20 +31,22 @@ public class Servidor {
 	private static int key = (int) Math.random() * 20 + 1;
 	
 	/**
-	 * Arraylis para obtener varios clientes y recibir varias peticiones
+	 * 
 	 */
-	private static ArrayList<Socket> clientes = new ArrayList<Socket>();
-	private static ArrayList<DataInputStream> in = new ArrayList<DataInputStream>();
-	private static ArrayList<DataOutputStream> out = new ArrayList<DataOutputStream>();
+	private static int iClientes = 1;
+	
+	/**
+	 * Mapas para obtener varios clientes y recibir varias peticiones
+	 */
+	private static HashMap<Integer, Socket> clientes = new HashMap<Integer, Socket>();
+	private static HashMap<Integer, DataInputStream> inC = new HashMap<Integer, DataInputStream>();
+	private static HashMap<Integer, DataOutputStream> outC= new HashMap<Integer, DataOutputStream>();
 
 	public static void main(String[] args) {
-//		DataInputStream in;
-//		DataOutputStream out;
 		try {
 			serverSocket = new ServerSocket(PORT);
 			System.out.println("::Servidor escuchando a los posibles clientes::");
 
-//			while (true) {
 			/*
 			 * Esperando respuesta del usuario, solo acepta uno a uno, usar hilos para
 			 * atender a varios usuarios al timepo.
@@ -51,38 +54,6 @@ public class Servidor {
 
 			Runnable conexion = new conexion();
 			new Thread(conexion).start();
-
-//			while (true) {}
-
-			// Recibo el mensaje del cliente1
-			// Envio el mensaje al cliente2
-//				out2.writeUTF(in1.readUTF());
-//
-//				// Recibo el mensaje del cliente2
-//				// Envio el mensaje al cliente1
-//				out1.writeUTF(in2.readUTF());
-
-//				// Palabara y llave encriptada
-//				String wordEncrypted = encriptacionCesar(word, key);
-//				String keyEncrypted = encriptacionHexadecimal(key + "");
-//
-//				// Desencriptar palabra y key
-//				String keyDecrypted = desencriptacionHexadecimal(keyEncrypted);
-//				String wordDecryted = desencriptacionCesar(wordEncrypted, Integer.parseInt(keyDecrypted));
-//
-//				out.writeUTF("La palabra Encriptada es: " + wordEncrypted + "\n" + "La clave encriptada es: "
-//						+ keyEncrypted + "\n" + "La palabra Desencriptada es: " + wordDecryted + "\n"
-//						+ "La clave Desencriptada es: " + keyDecrypted + "\n");
-
-			// Cierro la conexion con el cliente
-//				cliente1.close();
-//				cliente2.close();
-//				in1.close();
-//				out1.close();
-//
-//				in2.close();
-//				out2.close();
-//			}
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -100,26 +71,30 @@ public class Servidor {
 		private Socket cliente;
 		private int numCliente;
 		private boolean exit = false;
-
-		public comunicacion(Socket cliente) {
+		private DataInputStream in;
+		private DataOutputStream out;
+		
+		public comunicacion(Socket cliente, int numClient,  DataInputStream in, DataOutputStream out) {
 			this.cliente = cliente;
-			this.numCliente = clientes.indexOf(cliente);
+			this.numCliente = numClient;
+			this.in = in;
+			this.out = out;
 		}
 
 		@Override
 		public void run() {
 			while (!exit) {
 				try {
-					String msj = in.get(numCliente).readUTF();
-					if (desencriptacionCesar(msj, key).equals(EXIT)) {
+					String msj = in.readUTF();
+					if (msj.equals(EXIT)) {
 						String msjExit = "Usted se ha desconectado del servidor";
-						out.get(numCliente).writeUTF(encriptacionCesar(msjExit, key));
+						out.writeUTF(msjExit);
 						stop();
 					} else {
-						for (int i = 0; i < clientes.size(); i++) {
-							if (i != numCliente) {
-								out.get(i).writeUTF(msj);
-							}
+						for (Map.Entry<Integer, Socket> pair : clientes.entrySet()) {
+							int v = pair.getKey();
+							if (v != numCliente) 
+								outC.get(v).writeUTF(msj);
 						}
 					}
 
@@ -137,11 +112,11 @@ public class Servidor {
 			exit = true;
 			cliente.close();
 			clientes.remove(numCliente);
-			in.get(numCliente).close();
-			in.remove(numCliente);
-			out.get(numCliente).close();
-			out.remove(numCliente);
-			System.out.println("::El usuario " + (numCliente+1) + " se ha desconectado::");
+			in.close();
+			out.close();
+			inC.remove(numCliente);
+			outC.remove(numCliente);
+			System.out.println("::El usuario " + (numCliente) + " se ha desconectado::");
 		}
 
 	}
@@ -152,24 +127,26 @@ public class Servidor {
 	 *
 	 */
 	public static class conexion implements Runnable {
-		private int value;
-
-		public conexion() {
-			value = 0;
-		}
 
 		@Override
 		public void run() {
 			while (true) {
 
 				try {
-					clientes.add(serverSocket.accept());
-					value = clientes.size() - 1;
-					in.add(new DataInputStream(clientes.get(value).getInputStream()));
-					out.add(new DataOutputStream(clientes.get(value).getOutputStream()));
-					System.out.println("::El cliente numero " + (value + 1) + " se ha conectado::");
-					out.get(value).writeUTF(encriptacionHexadecimal(key+""));
-					Runnable comunicacion = new comunicacion(clientes.get(value));
+					int value = iClientes++;
+					clientes.put(value, serverSocket.accept());
+					Socket temp = clientes.get(value);
+					DataInputStream in =  new DataInputStream(temp.getInputStream());
+					DataOutputStream out = new DataOutputStream(temp.getOutputStream());
+					inC.put(value, in);
+					outC.put(value, out);
+					
+					System.out.println("::El cliente numero " + value + " se ha conectado::");
+					System.out.println(temp.getLocalPort());
+					System.out.println(temp.getPort());
+					out.writeUTF(encriptacionHexadecimal(key+""));
+					
+					Runnable comunicacion = new comunicacion(temp, value, in, out);
 					new Thread(comunicacion).start();
 
 				} catch (IOException e) {
@@ -197,70 +174,4 @@ public class Servidor {
 
 		return wordHexadecimal.toString().trim();
 	}
-	
-	/*
-	 * Metodo que se encarga de encritar la palabra orginal, usando el cifrado
-	 * cesar, el cual consiste en generar un numero del 1-20 y desplazar hacia la
-	 * izquierda o derecha la letra dicha cantidad en el alfabeto. En este caso se
-	 * hara hacia la derecha
-	 */
-	private static String encriptacionCesar(String word, int key) {
-		StringBuilder wordEncrypted = new StringBuilder();
-		char arr[] = word.toCharArray();
-
-		for (int i = 0; i < arr.length; i++) {
-			if (Character.isAlphabetic(arr[i])) {
-				if (Character.isUpperCase(arr[i])) {
-					int value = arr[i] - 'A';
-					value = (value + key) % 26;
-					value += 'A';
-					wordEncrypted.append((char) value + "");
-				} else {
-					int value = arr[i] - 'a';
-					value = (value + key) % 26;
-					value += 'a';
-					wordEncrypted.append((char) value + "");
-				}
-			} else
-				wordEncrypted.append(arr[i] + "");
-		}
-
-		return wordEncrypted.toString();
-	}
-	
-	/*
-	 * Metodo que desencripta la palabra encriptada
-	 */
-	private static String desencriptacionCesar(String word, int key) {
-		StringBuilder wordDecrypted = new StringBuilder();
-		char arr[] = word.toCharArray();
-
-		for (int i = 0; i < arr.length; i++) {
-			if (Character.isAlphabetic(arr[i])) {
-				if (Character.isUpperCase(arr[i])) {
-					int value = arr[i] - 'A';
-					value = (value - key);
-					if (value < 0)
-						value = 26 + value;
-					else
-						value %= 26;
-					value += 'A';
-					wordDecrypted.append((char) value + "");
-				} else {
-					int value = arr[i] - 'a';
-					value = (value - key);
-					if (value < 0)
-						value = 26 + value;
-					else
-						value %= 26;
-					value += 'a';
-					wordDecrypted.append((char) value + "");
-				}
-			} else
-				wordDecrypted.append(arr[i] + "");
-		}
-
-		return wordDecrypted.toString();
-	}
-
 }
