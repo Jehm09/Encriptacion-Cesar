@@ -13,6 +13,9 @@ public class Cliente {
 	 */
 	public static final String EXIT = "SALIR";
 	public static final String EXITSERVER = "Usted se ha desconectado del servidor";
+	public static final String CLIENTES = "LISTA";
+	public static final String EMPTY = "No hay nadie con quien conversar";
+//	public static final String CONEXION = "CONECTAR";
 
 	/*
 	 * 
@@ -31,6 +34,7 @@ public class Cliente {
 	private static Socket socket;
 	
 	private static boolean exit = false;
+	private static boolean conexion = false;
 	
 	/**
 	 * Buffers
@@ -57,6 +61,8 @@ public class Cliente {
 			
 			bw.write("::Se ha conectado al servidor::\n");
 			bw.write("::Si desea salir del chat escriba SALIR::\n");
+			bw.write("::Si desea ver la lista de usuario escriba LISTA::\n");
+			bw.write("::Si desea conectar con un usuario escriba CONECTAR;idUsuario::\n");
 			bw.flush();
 			
 			key = Integer.parseInt(desencriptacionHexadecimal(in.readUTF()));
@@ -92,9 +98,13 @@ public class Cliente {
 			while (!exit) {
 				try {
 					String word = in.readUTF();
-					if (!word.equals(EXITSERVER)) {
+					if (conexion  && !word.equals(EXITSERVER)) {
 						word = desencriptacionCesar(word, key);
 					}
+					if (conexion  && word.equals(EMPTY)) {
+						conexion = false;
+					}
+					
 					bw.write(word+"\n");
 					bw.flush();
 				} catch (IOException e) {
@@ -134,6 +144,7 @@ public class Cliente {
 					if (word.equals(EXIT)) {
 						exit = true;
 					}
+					
 					else {
 						word = encriptacionCesar(word, key);
 					}
