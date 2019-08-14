@@ -19,8 +19,8 @@ public class Cliente {
 	 * Direccion local de la maquina
 	 */
 	public static final String LOCAL_HOST = "localhost";
-//	public static final String LOCAL_HOST = "120.0.0.1";
-//	public static final String HOST = "192.168.0.1";
+
+
 	/**
 	 * Puerto por donde se establecera la conexion
 	 */
