@@ -12,10 +12,10 @@ public class Cliente {
 	 * Constantes
 	 */
 	public static final String EXIT = "SALIR";
-	public static final String EXITSERVER = "Usted se ha desconectado del servidor";
 	public static final String CLIENTES = "LISTA";
-	public static final String EMPTY = "No hay nadie con quien conversar";
-//	public static final String CONEXION = "CONECTAR";
+	public static final String EMPTY = "CHATOFF";
+	public static final String KEY = "KEY";
+	public static final String CONEXION = "CONECTAR";
 
 	/*
 	 * 
@@ -65,7 +65,7 @@ public class Cliente {
 			bw.write("::Si desea conectar con un usuario escriba CONECTAR;idUsuario::\n");
 			bw.flush();
 			
-			key = Integer.parseInt(desencriptacionHexadecimal(in.readUTF()));
+//			key = Integer.parseInt(desencriptacionHexadecimal(in.readUTF()));
 			
 			/*
 			 * Hilo para lectura 
@@ -98,15 +98,28 @@ public class Cliente {
 			while (!exit) {
 				try {
 					String word = in.readUTF();
-					if (conexion  && !word.equals(EXITSERVER)) {
-						word = desencriptacionCesar(word, key);
-					}
-					if (conexion  && word.equals(EMPTY)) {
+					if (conexion && word.equals(EMPTY)) {
 						conexion = false;
 					}
+					if (conexion && !word.equals(EXIT)) {
+						word = desencriptacionCesar(word, key);
+					}
+					if (word.equals(EXIT)) {
+						word = "Se ha desconectado del servidor";
+					}
+					if (word.contains(KEY)) {
+						String tempS = desencriptacionHexadecimal(word.split(";")[1]);
+						int valorK = Integer.parseInt(tempS);
+						key = valorK;
+						conexion = true;
+						bw.write("Se ha establecido una conexion\n");
+						bw.flush();
+					} else {
+						bw.write(word+"\n");
+						bw.flush();
+					}
 					
-					bw.write(word+"\n");
-					bw.flush();
+					
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -143,9 +156,7 @@ public class Cliente {
 					String word = br.readLine();
 					if (word.equals(EXIT)) {
 						exit = true;
-					}
-					
-					else {
+					}else if (!word.equals(CLIENTES) && !word.contains(CONEXION) && conexion) {
 						word = encriptacionCesar(word, key);
 					}
 					out.writeUTF(word);

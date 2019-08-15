@@ -13,6 +13,7 @@ public class Servidor {
 	public static final String EXIT = "SALIR";
 	public static final String CLIENTES = "LISTA";
 	public static final String CONEXION = "CONECTAR";
+	public static final String EMPTY = "CHATOFF";
 
 	/**
 	 * Puerto por donde el servidor atendera a los clientes
@@ -88,17 +89,17 @@ public class Servidor {
 			while (!exit) {
 				try {
 					String msj = in.readUTF();
-					if (idCliente2 != -1 && conexion.containsKey(idCliente)) {
+					if (idCliente2 == -1 && conexion.containsKey(idCliente)) {
 						idCliente2 = conexion.get(idCliente);
 					}
 					
-					
 					if (msj.equals(EXIT)) { //Si el usuario quiere salir del servidor
-						String msjExit = "Usted se ha desconectado del servidor";
-						out.writeUTF(msjExit);
+						out.writeUTF(EXIT);
+						conexion.remove(idCliente);
 						
-						if (idCliente2 != -1) {
-							out.writeUTF("No hay nadie con quien conversar");
+						if (idCliente2 != -1) {//mirar luego
+							outC.get(idCliente2).writeUTF(EMPTY);
+							conexion.remove(idCliente2);
 						}
 						stop();
 					} else if(msj.equals(CLIENTES)) { //Muestra la lista de clientes
@@ -111,25 +112,30 @@ public class Servidor {
 					}
 					else if(msj.contains(CONEXION)) { //Por si un usuario quiere crear un chat con otro usuario
 						long id = Long.parseLong(msj.split(";")[1]);
-						outC.get(id).writeUTF("El usuario "+ idCliente + "ha creado un chat");
-						
-						int k = (int) Math.random() * 20 + 1;
-						String key = encriptacionHexadecimal(k+"");
-						
-						out.writeUTF("La llave es: " + key +"\n");
-						outC.get(id).writeUTF("La llave es: " + key +"\n");
-						out.writeUTF("KEY;" + key +"\n");
-						outC.get(id).writeUTF("KEY;" + key +"\n");
-						
-						conexion.put(idCliente, id);
-						conexion.put(id, idCliente);
+						if (clientes.containsKey(id)) {
+							outC.get(id).writeUTF("El usuario "+ idCliente + " ha creado un chat");
+							
+							int k = (int) Math.random() * 20 + 1;
+							String key = encriptacionHexadecimal(k+"");
+							
+							out.writeUTF("La llave es: " + key +"\n");
+							outC.get(id).writeUTF("La llave es: " + key +"\n");
+							out.writeUTF("KEY;" + key);
+							outC.get(id).writeUTF("KEY;" + key);
+							
+							conexion.put(idCliente, id);
+							conexion.put(id, idCliente);
+						} else {
+							out.writeUTF("El cliente no existe");
+						}
 					}
 					
 					else { //Si ya hay un usuario con el cual hacer conversacion. Se le envia los mensajes
-						if (clientes.containsKey(idCliente2)) {
+						if (idCliente2 != -1 && conexion.containsKey(idCliente)) {
 							outC.get(idCliente2).writeUTF(msj);
 						} else {
 							idCliente2 = -1;
+							out.writeUTF("No hay nadie en el chat para conversar");
 						}
 					}
 
@@ -176,10 +182,16 @@ public class Servidor {
 					inC.put(id, in);
 					outC.put(id, out);
 					
-					System.out.println("::El cliente con id " + id + " se ha conectado::");
+					System.out.println("::El usuario con id " + id + " se ha conectado::");
 					System.out.println(temp.getLocalPort());
 					System.out.println(temp.getPort());
 //					out.writeUTF(encriptacionHexadecimal(key+""));
+					
+					for (Map.Entry<Long, Socket> v : clientes.entrySet()) {
+						if (v.getKey() != id) {
+							outC.get(v.getKey()).writeUTF("::El usuario con id: " + id + " ha ingresado al servidor::");
+						}
+					}
 					
 					Runnable comunicacion = new comunicacion(temp, id, in, out);
 					new Thread(comunicacion).start();
